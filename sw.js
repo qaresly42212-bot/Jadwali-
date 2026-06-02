@@ -1,4 +1,5 @@
-const CACHE = 'jadwali-v1';
+const CACHE = 'jadwali-v2';
+const BASE = '/Jadwali-/';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
