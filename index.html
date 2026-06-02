@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="جدولي">
+<link rel="manifest" href="manifest.json">
+<title>جدولي — إبراهيم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:       #0d0d1a;
+  --bg2:      #13132b;
+  --bg3:      #1a1a38;
+  --card:     #1e1e3f;
+  --border:   #2a2a5a;
+  --accent:   #e94560;
+  --accent2:  #7c3aed;
+  --gold:     #f59e0b;
+  --green:    #10b981;
+  --blue:     #3b82f6;
+  --text:     #f0f0ff;
+  --muted:    #8888aa;
+  --radius:   16px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: 80px;
+}
+
+/* ── Top Nav ── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(180deg, var(--bg) 80%, transparent);
+  padding: 16px 20px 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar-title { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+.topbar-title span { color: var(--accent); }
+.clock {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px; color: var(--muted);
+  background: var(--card);
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Bottom Nav ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex; padding: 8px 0 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  font-size: 10px; color: var(--muted);
+  cursor: pointer; transition: color 0.2s;
+  border: none; background: none;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item .icon { font-size: 22px; }
+
+/* ── Pages ── */
+.page { display: none; padding: 0 16px; }
+.page.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ── Prayer Banner ── */
+.prayer-banner {
+  background: linear-gradient(135deg, #1a1050, #0d1a40);
+  border: 1px solid #2a2a6a;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.prayer-banner .label { font-size: 11px; color: var(--muted); }
+.prayer-banner .name { font-size: 16px; font-weight: 700; color: #a78bfa; }
+.prayer-banner .countdown { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--gold); }
+.prayer-banner .next-label { font-size: 10px; color: var(--muted); text-align: left; }
+
+.prayer-grid {
+  display: grid; grid-template-columns: repeat(5,1fr);
+  gap: 6px; margin-bottom: 16px;
+}
+.prayer-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.prayer-pill.active {
+  background: linear-gradient(135deg, #3b1fa0, #1a0d60);
+  border-color: #7c3aed;
+}
+.prayer-pill .pname { font-size: 10px; color: var(--muted); }
+.prayer-pill .ptime { font-size: 12px; font-weight: 700; color: var(--text); font-family:'Space Mono',monospace; }
+.prayer-pill.active .pname { color: #c4b5fd; }
+.prayer-pill.active .ptime { color: #a78bfa; }
+
+/* ── Day Selector ── */
+.day-selector {
+  display: flex; gap: 6px; overflow-x: auto;
+  padding-bottom: 8px; margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.day-selector::-webkit-scrollbar { display: none; }
+.day-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-family: 'Cairo', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.day-btn.today { border-color: var(--accent); color: var(--accent); }
+.day-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* ── Current Task Hero ── */
+.current-hero {
+  background: linear-gradient(135deg, #1a0a20, #0a1a20);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.current-hero::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.hero-label { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.hero-task { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.hero-time { font-size: 12px; color: var(--muted); font-family:'Space Mono',monospace; }
+.hero-progress {
+  margin-top: 12px;
+  height: 4px; background: var(--border);
+  border-radius: 2px; overflow: hidden;
+}
+.hero-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+/* ── Schedule List ── */
+.schedule-list { display: flex; flex-direction: column; gap: 6px; }
+
+.task-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+  cursor: pointer;
+}
+.task-card.current {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, #1a0a20, #0d0d20);
+  box-shadow: 0 0 20px rgba(233,69,96,0.15);
+}
+.task-card.done { opacity: 0.45; }
+.task-card.done .task-name { text-decoration: line-through; }
+
+.task-card::before {
+  content:''; position:absolute; right:0; top:0; bottom:0;
+  width: 3px;
+}
+.task-card.cat-prayer::before { background: #7c3aed; }
+.task-card.cat-gym::before { background: var(--green); }
+.task-card.cat-uni::before { background: var(--blue); }
+.task-card.cat-sleep::before { background: #6366f1; }
+.task-card.cat-work::before { background: #f59e0b; }
+.task-card.cat-study::before { background: #06b6d4; }
+.task-card.cat-food::before { background: #f97316; }
+.task-card.cat-free::before { background: #84cc16; }
+.task-card.cat-custom::before { background: var(--accent); }
+
+.task-emoji { font-size: 22px; flex-shrink: 0; width: 32px; text-align:center; }
+.task-info { flex: 1; min-width: 0; }
+.task-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.task-time { font-size: 11px; color: var(--muted); font-family:'Space Mono',monospace; }
+.task-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px;
+  background: rgba(233,69,96,0.2); color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── Section Header ── */
+.section-hdr {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--muted); text-transform: uppercase;
+  margin: 20px 0 8px; padding-right: 4px;
+}
+
+/* ── Add Task ── */
+.add-fab {
+  position: fixed; bottom: 90px; left: 20px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--accent);
+  border: none; color: white; font-size: 26px;
+  cursor: pointer; z-index: 99;
+  box-shadow: 0 4px 20px rgba(233,69,96,0.5);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s;
+}
+.add-fab:active { transform: scale(0.92); }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+  display: none; align-items: flex-end;
+}
+.modal-overlay.open { display: flex; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { opacity:0; } to { opacity:1; } }
+
+.modal {
+  background: var(--bg2);
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 20px 20px 32px;
+  width: 100%;
+  animation: sheetUp 0.3s ease;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--border); border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display:block; }
+.form-input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  font-size: 14px;
+  outline: none;
+  direction: rtl;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--accent); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: var(--accent);
+  border: none; border-radius: 12px;
+  color: white; font-family: 'Cairo', sans-serif;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; margin-top: 6px;
+  transition: opacity 0.2s;
+}
+.btn-primary:active { opacity: 0.85; }
+
+.emoji-row {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
+}
+.emoji-opt {
+  font-size: 22px; padding: 6px 8px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer; transition: all 0.15s;
+}
+.emoji-opt.selected { border-color: var(--accent); background: rgba(233,69,96,0.15); }
+
+/* ── Settings / Stats ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.stat-val { font-size: 24px; font-weight: 900; color: var(--accent); }
+.stat-sub { font-size: 11px; color: var(--muted); }
+
+.notif-btn {
+  width: 100%; padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'Cairo', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.notif-status { font-size: 12px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+.notif-status.on { background: rgba(16,185,129,0.2); color: var(--green); }
+.notif-status.off { background: rgba(233,69,96,0.15); color: var(--accent); }
+
+.install-card {
+  background: linear-gradient(135deg, #1a0a30, #0a1a30);
+  border: 1px solid #3b2a6a;
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.install-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: #a78bfa; }
+.install-steps { list-style: none; }
+.install-steps li { font-size: 13px; color: var(--muted); padding: 4px 0; }
+.install-steps li::before { content: counter(step) '. '; counter-increment: step; color: var(--accent); font-weight: 700; }
+.install-steps { counter-reset: step; }
+
+/* ── Swipe delete ── */
+.task-delete-btn {
+  background: rgba(233,69,96,0.2);
+  border: none; border-radius: 8px;
+  padding: 6px 10px; color: var(--accent);
+  font-size: 14px; cursor: pointer;
+  display: none;
+}
+.task-card:hover .task-delete-btn { display: block; }
+
+/* ── Loading ── */
+.loading { text-align:center; padding: 20px; color: var(--muted); font-size: 13px; }
+
+/* ── Pulse dot ── */
+.pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); display: inline-block;
+  animation: pulse 1.5s infinite;
+  margin-left: 6px;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-title">جدول<span>ي</span></div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<!-- Pages -->
+<div class="page active" id="page-today">
+  <!-- Prayer Banner -->
+  <div class="prayer-banner">
+    <div>
+      <div class="label">الصلاة القادمة</div>
+      <div class="name" id="next-prayer-name">جاري التحميل...</div>
+    </div>
+    <div style="text-align:center">
+      <div class="next-label">بعد</div>
+      <div class="countdown" id="prayer-countdown">--:--</div>
+    </div>
+  </div>
+
+  <div class="prayer-grid" id="prayer-grid">
+    <div class="prayer-pill"><div class="pname">فجر</div><div class="ptime">--:--</div></div>
+    <div class="prayer-pill"><div class="pname">ظهر</div><div class="ptime">--:--</div></div>
+    <div class="prayer-pill"><div class="pname">عصر</div><div class="ptime">--:--</div></div>
+    <div class="prayer-pill"><div class="pname">مغرب</div><div class="ptime">--:--</div></div>
+    <div class="prayer-pill"><div class="pname">عشاء</div><div class="ptime">--:--</div></div>
+  </div>
+
+  <!-- Current Task -->
+  <div class="current-hero" id="current-hero" style="display:none">
+    <div class="hero-label">▶ النشاط الحالي <span class="pulse"></span></div>
+    <div class="hero-task" id="hero-task">--</div>
+    <div class="hero-time" id="hero-time">--</div>
+    <div class="hero-progress"><div class="hero-bar" id="hero-bar"></div></div>
+  </div>
+
+  <div id="today-tasks-container"></div>
+</div>
+
+<div class="page" id="page-week">
+  <div class="day-selector" id="day-selector"></div>
+  <div id="week-tasks-container"></div>
+</div>
+
+<div class="page" id="page-settings">
+  <div class="section-hdr">الإحصائيات</div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">أيام النادي</div>
+      <div class="stat-val">5</div>
+      <div class="stat-sub">جلسة أسبوعياً</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ساعات الجامعة</div>
+      <div class="stat-val">22</div>
+      <div class="stat-sub">ساعة أسبوعياً</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">شيفتات العمل</div>
+      <div class="stat-val">3</div>
+      <div class="stat-sub">ليلة أسبوعياً</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ساعات التمرين</div>
+      <div class="stat-val">10</div>
+      <div class="stat-sub">ساعة أسبوعياً</div>
+    </div>
+  </div>
+
+  <div class="section-hdr">التنبيهات</div>
+  <button class="notif-btn" onclick="requestNotifications()">
+    <span>تنبيهات المهام</span>
+    <span class="notif-status off" id="notif-status">غير مفعّل</span>
+  </button>
+  <button class="notif-btn" onclick="testNotification()">
+    <span>اختبار تنبيه</span>
+    <span>🔔</span>
+  </button>
+
+  <div class="section-hdr">تثبيت التطبيق</div>
+  <div class="install-card">
+    <h3>📲 ثبّت التطبيق على هاتفك</h3>
+    <ol class="install-steps">
+      <li>افتح هذا الرابط في متصفح Chrome</li>
+      <li>اضغط على قائمة Chrome (⋮)</li>
+      <li>اختر "إضافة إلى الشاشة الرئيسية"</li>
+      <li>اضغط "إضافة" — سيظهر أيقونة كتطبيق</li>
+    </ol>
+  </div>
+
+  <div class="section-hdr">مواقيت الصلاة</div>
+  <div class="stat-card" style="margin-bottom:10px">
+    <div class="stat-label">المصدر</div>
+    <div style="font-size:13px; margin-top:4px; color:var(--text)">Aladhan API — القدس، فلسطين</div>
+    <div class="stat-sub">تتحدث تلقائياً كل يوم</div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('today',this)">
+    <span class="icon">📅</span><span>اليوم</span>
+  </button>
+  <button class="nav-item" onclick="showPage('week',this)">
+    <span class="icon">🗓</span><span>الأسبوع</span>
+  </button>
+  <button class="nav-item" onclick="showPage('settings',this)">
+    <span class="icon">⚙️</span><span>الإعدادات</span>
+  </button>
+</div>
+
+<!-- FAB -->
+<button class="add-fab" onclick="openModal()">+</button>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="modal" onclick="e=>e.target===this&&closeModal()">
+  <div class="modal" onclick="e=>e.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">➕ إضافة مهمة</div>
+
+    <div class="form-group">
+      <label class="form-label">اسم المهمة</label>
+      <input class="form-input" id="task-name" placeholder="مثال: مراجعة رياضيات">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">الأيقونة</label>
+      <div class="emoji-row" id="emoji-row">
+        <span class="emoji-opt selected" data-e="📝" onclick="selectEmoji(this)">📝</span>
+        <span class="emoji-opt" data-e="💊" onclick="selectEmoji(this)">💊</span>
+        <span class="emoji-opt" data-e="🏃" onclick="selectEmoji(this)">🏃</span>
+        <span class="emoji-opt" data-e="📞" onclick="selectEmoji(this)">📞</span>
+        <span class="emoji-opt" data-e="🛒" onclick="selectEmoji(this)">🛒</span>
+        <span class="emoji-opt" data-e="💡" onclick="selectEmoji(this)">💡</span>
+        <span class="emoji-opt" data-e="🔧" onclick="selectEmoji(this)">🔧</span>
+        <span class="emoji-opt" data-e="🎯" onclick="selectEmoji(this)">🎯</span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">وقت البداية</label>
+        <input class="form-input" id="task-start" type="time">
+      </div>
+      <div class="form-group">
+        <label class="form-label">وقت الانتهاء</label>
+        <input class="form-input" id="task-end" type="time">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">اليوم</label>
+      <select class="form-input" id="task-day">
+        <option value="0">الجمعة</option>
+        <option value="1">السبت</option>
+        <option value="2">الأحد</option>
+        <option value="3">الاثنين</option>
+        <option value="4">الثلاثاء</option>
+        <option value="5">الأربعاء</option>
+        <option value="6">الخميس</option>
+      </select>
+    </div>
+
+    <button class="btn-primary" onclick="saveCustomTask()">حفظ المهمة</button>
+    <button class="btn-primary" onclick="closeModal()" style="background:var(--card);color:var(--muted);margin-top:8px">إلغاء</button>
+  </div>
+</div>
+
+<script>
+// ─── Schedule Data ───────────────────────────────────────────────────────────
+const SCHEDULE = {
+  0: [ // الجمعة
+    {t:'03:51',e:'03:51','end':'04:20',emoji:'☪️',name:'فجر — مسجد',cat:'prayer'},
+    {t:'04:20',end:'10:00',emoji:'😴',name:'نوم',cat:'sleep'},
+    {t:'10:00',end:'10:30',emoji:'☕',name:'استيقاظ + وجبة + كافيين',cat:'food'},
+    {t:'10:30',end:'12:37',emoji:'🎮',name:'وقت حر / ألعاب',cat:'free'},
+    {t:'12:37',end:'13:00',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:00',end:'14:30',emoji:'🍽️',name:'وجبة + قيلولة',cat:'food'},
+    {t:'14:30',end:'16:00',emoji:'📚',name:'مراجعة خفيفة',cat:'study'},
+    {t:'16:00',end:'16:30',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'16:30',end:'19:45',emoji:'🚶',name:'خروج مع أصدقاء',cat:'free'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:15',emoji:'🍽️',name:'عشاء + راحة',cat:'food'},
+    {t:'21:15',end:'21:45',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'21:45',end:'00:00',emoji:'🎮',name:'ألعاب / سيم ريسينج',cat:'free'},
+  ],
+  1: [ // السبت
+    {t:'03:51',end:'04:20',emoji:'☪️',name:'فجر — مسجد',cat:'prayer'},
+    {t:'04:20',end:'09:00',emoji:'😴',name:'نوم',cat:'sleep'},
+    {t:'09:00',end:'10:00',emoji:'☕',name:'استيقاظ + وجبة + تجهيز',cat:'food'},
+    {t:'10:00',end:'12:37',emoji:'🎓',name:'جامعة',cat:'uni'},
+    {t:'12:37',end:'13:10',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:10',end:'15:30',emoji:'🎓',name:'جامعة (تابع)',cat:'uni'},
+    {t:'15:30',end:'16:10',emoji:'🍽️',name:'وجبة ما قبل التمرين + pre-workout',cat:'food'},
+    {t:'16:10',end:'16:40',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'17:00',end:'19:00',emoji:'💪',name:'نادي',cat:'gym'},
+    {t:'19:00',end:'19:45',emoji:'🍽️',name:'Whey + وجبة بروتين',cat:'food'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:45',emoji:'📚',name:'مراجعة دراسية',cat:'study'},
+    {t:'21:45',end:'22:15',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'22:15',end:'23:30',emoji:'🎮',name:'راحة / ألعاب',cat:'free'},
+    {t:'23:30',end:'03:51',emoji:'😴',name:'نوم',cat:'sleep'},
+  ],
+  2: [ // الأحد
+    {t:'05:00',end:'05:10',emoji:'🌙',name:'نهاية الشيفت',cat:'work'},
+    {t:'05:10',end:'05:40',emoji:'☪️',name:'فجر — بعد الوصول',cat:'prayer'},
+    {t:'05:40',end:'13:00',emoji:'😴',name:'نوم تعويضي (7.5 ساعة)',cat:'sleep'},
+    {t:'13:00',end:'13:15',emoji:'☕',name:'استيقاظ + وجبة',cat:'food'},
+    {t:'13:15',end:'14:30',emoji:'📚',name:'مراجعة / واجبات',cat:'study'},
+    {t:'14:30',end:'16:00',emoji:'📚',name:'دراسة هندسة / AutoCAD',cat:'study'},
+    {t:'16:00',end:'16:15',emoji:'🍽️',name:'وجبة ما قبل التمرين',cat:'food'},
+    {t:'16:15',end:'16:45',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'17:00',end:'19:00',emoji:'💪',name:'نادي',cat:'gym'},
+    {t:'19:00',end:'19:45',emoji:'🍽️',name:'Whey + وجبة بروتين',cat:'food'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:15',emoji:'🎮',name:'وقت حر / راحة',cat:'free'},
+    {t:'21:15',end:'21:45',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'21:45',end:'22:00',emoji:'🌙',name:'استعداد للشيفت',cat:'work'},
+    {t:'22:00',end:'05:00',emoji:'🌙',name:'بداية الشيفت',cat:'work'},
+  ],
+  3: [ // الاثنين
+    {t:'05:00',end:'05:10',emoji:'🌙',name:'نهاية الشيفت',cat:'work'},
+    {t:'05:10',end:'05:40',emoji:'☪️',name:'فجر + نوم فوري',cat:'prayer'},
+    {t:'05:40',end:'09:00',emoji:'😴',name:'نوم (3.5 ساعة)',cat:'sleep'},
+    {t:'09:00',end:'09:15',emoji:'⚠️',name:'استيقاظ + كافيين قوي',cat:'food'},
+    {t:'10:00',end:'12:37',emoji:'🎓',name:'جامعة',cat:'uni'},
+    {t:'12:37',end:'13:10',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:10',end:'15:30',emoji:'🎓',name:'جامعة (تابع)',cat:'uni'},
+    {t:'15:30',end:'16:15',emoji:'😴',name:'وجبة + قيلولة 45 دق ⚠️',cat:'sleep'},
+    {t:'16:15',end:'16:45',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'17:00',end:'19:00',emoji:'💪',name:'نادي',cat:'gym'},
+    {t:'19:00',end:'19:45',emoji:'🍽️',name:'Whey + وجبة بروتين',cat:'food'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:45',emoji:'📚',name:'دراسة (90 دقيقة)',cat:'study'},
+    {t:'21:45',end:'22:15',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'22:15',end:'22:30',emoji:'😴',name:'نوم مبكر — إلزامي',cat:'sleep'},
+  ],
+  4: [ // الثلاثاء
+    {t:'03:51',end:'04:20',emoji:'☪️',name:'فجر — مسجد',cat:'prayer'},
+    {t:'04:20',end:'07:00',emoji:'😴',name:'نوم',cat:'sleep'},
+    {t:'07:00',end:'07:30',emoji:'☕',name:'استيقاظ + وجبة كثيفة + كافيين',cat:'food'},
+    {t:'08:00',end:'12:37',emoji:'🎓',name:'جامعة',cat:'uni'},
+    {t:'12:37',end:'13:00',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:00',end:'13:30',emoji:'🍽️',name:'انتهاء جامعة + وجبة كبيرة',cat:'food'},
+    {t:'13:30',end:'16:00',emoji:'😴',name:'قيلولة استراتيجية (2-3 ساعات)',cat:'sleep'},
+    {t:'16:00',end:'16:15',emoji:'☕',name:'استيقاظ + وجبة',cat:'food'},
+    {t:'16:15',end:'16:45',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'16:45',end:'19:45',emoji:'📚',name:'دراسة / AutoCAD',cat:'study'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:15',emoji:'🍽️',name:'وجبة + استعداد للشيفت',cat:'food'},
+    {t:'21:15',end:'21:45',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'22:00',end:'05:00',emoji:'🌙',name:'بداية الشيفت',cat:'work'},
+  ],
+  5: [ // الأربعاء
+    {t:'03:51',end:'04:20',emoji:'☪️',name:'فجر — مسجد',cat:'prayer'},
+    {t:'04:20',end:'09:00',emoji:'😴',name:'نوم',cat:'sleep'},
+    {t:'09:00',end:'10:00',emoji:'☕',name:'استيقاظ + روتين + وجبة',cat:'food'},
+    {t:'10:00',end:'12:37',emoji:'🎓',name:'جامعة',cat:'uni'},
+    {t:'12:37',end:'13:00',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:00',end:'14:00',emoji:'🎓',name:'جامعة (تابع)',cat:'uni'},
+    {t:'14:00',end:'14:30',emoji:'🍽️',name:'انتهاء + وجبة',cat:'food'},
+    {t:'14:30',end:'16:10',emoji:'📚',name:'دراسة هندسة — ساعتين',cat:'study'},
+    {t:'16:10',end:'16:45',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'17:00',end:'19:00',emoji:'💪',name:'نادي',cat:'gym'},
+    {t:'19:00',end:'19:45',emoji:'🍽️',name:'Whey + وجبة بروتين',cat:'food'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:15',emoji:'🎮',name:'وقت حر / خروج / ألعاب',cat:'free'},
+    {t:'21:15',end:'21:45',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'21:45',end:'23:00',emoji:'📚',name:'إنهاء واجبات',cat:'study'},
+    {t:'23:00',end:'03:51',emoji:'😴',name:'نوم',cat:'sleep'},
+  ],
+  6: [ // الخميس
+    {t:'03:51',end:'04:20',emoji:'☪️',name:'فجر — مسجد',cat:'prayer'},
+    {t:'04:20',end:'10:00',emoji:'😴',name:'نوم',cat:'sleep'},
+    {t:'10:00',end:'11:00',emoji:'☕',name:'استيقاظ + وجبة',cat:'food'},
+    {t:'11:00',end:'12:37',emoji:'🎓',name:'جامعة',cat:'uni'},
+    {t:'12:37',end:'13:00',emoji:'☪️',name:'ظهر — مسجد',cat:'prayer'},
+    {t:'13:00',end:'13:30',emoji:'🍽️',name:'انتهاء + وجبة كبيرة',cat:'food'},
+    {t:'13:30',end:'15:30',emoji:'😴',name:'قيلولة 2 ساعة للشيفت',cat:'sleep'},
+    {t:'15:30',end:'16:15',emoji:'🍽️',name:'وجبة ما قبل التمرين',cat:'food'},
+    {t:'16:15',end:'16:45',emoji:'☪️',name:'عصر — مسجد',cat:'prayer'},
+    {t:'17:00',end:'19:00',emoji:'💪',name:'نادي',cat:'gym'},
+    {t:'19:00',end:'19:45',emoji:'🍽️',name:'Whey + وجبة بروتين',cat:'food'},
+    {t:'19:45',end:'20:15',emoji:'☪️',name:'مغرب — مسجد',cat:'prayer'},
+    {t:'20:15',end:'21:15',emoji:'🎮',name:'راحة / ألعاب',cat:'free'},
+    {t:'21:15',end:'21:45',emoji:'☪️',name:'عشاء — مسجد',cat:'prayer'},
+    {t:'22:00',end:'05:00',emoji:'🌙',name:'بداية الشيفت',cat:'work'},
+  ],
+};
+
+// Map JS getDay() (Sun=0) to our schedule index (Fri=0)
+// JS: Sun=0,Mon=1,Tue=2,Wed=3,Thu=4,Fri=5,Sat=6
+// Ours: Fri=0,Sat=1,Sun=2,Mon=3,Tue=4,Wed=5,Thu=6
+function jsToOur(jsDay) {
+  return [2,3,4,5,6,0,1][jsDay];
+}
+
+const DAY_NAMES = ['الجمعة','السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+const DAY_SHORT = ['جمعة','سبت','أحد','اثنين','ثلاثاء','أربعاء','خميس'];
+
+let prayerTimes = {};
+let customTasks = JSON.parse(localStorage.getItem('custom_tasks') || '[]');
+let selectedDay = jsToOur(new Date().getDay());
+let notifGranted = Notification.permission === 'granted';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function toMins(t) {
+  const [h,m] = t.split(':').map(Number);
+  return h*60+m;
+}
+function fmtTime(t) {
+  const [h,m] = t.split(':').map(Number);
+  const ampm = h<12?'ص':'م';
+  const h12 = h%12||12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+function now() {
+  const n = new Date();
+  return n.getHours()*60+n.getMinutes();
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// ─── Clock ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// ─── Prayer Times ─────────────────────────────────────────────────────────────
+async function fetchPrayers() {
+  const today = new Date();
+  const dd = pad(today.getDate()), mm = pad(today.getMonth()+1), yy = today.getFullYear();
+  const cached = localStorage.getItem(`prayers_${dd}_${mm}_${yy}`);
+  if (cached) { prayerTimes = JSON.parse(cached); renderPrayers(); return; }
+
+  try {
+    const r = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Jerusalem&country=Palestine&method=3&date=${dd}-${mm}-${yy}`);
+    const j = await r.json();
+    const t = j.data.timings;
+    prayerTimes = {
+      فجر: t.Fajr.slice(0,5),
+      ظهر: t.Dhuhr.slice(0,5),
+      عصر: t.Asr.slice(0,5),
+      مغرب: t.Maghrib.slice(0,5),
+      عشاء: t.Isha.slice(0,5),
+    };
+    localStorage.setItem(`prayers_${dd}_${mm}_${yy}`, JSON.stringify(prayerTimes));
+
+    // Inject into schedule
+    if (prayerTimes.فجر) {
+      // Update today's prayer tasks dynamically
+    }
+    renderPrayers();
+    if (notifGranted) schedulePrayerNotifs();
+  } catch(e) {
+    // Fallback to June 2026 Jerusalem times
+    prayerTimes = { فجر:'03:51', ظهر:'12:37', عصر:'16:17', مغرب:'19:45', عشاء:'21:15' };
+    renderPrayers();
+  }
+}
+
+function renderPrayers() {
+  const grid = document.getElementById('prayer-grid');
+  const names = Object.keys(prayerTimes);
+  const times = Object.values(prayerTimes);
+  const pills = grid.querySelectorAll('.prayer-pill');
+  const nowM = now();
+
+  let nextIdx = -1, nextMins = Infinity;
+  times.forEach((t,i) => {
+    const m = toMins(t);
+    pills[i].querySelector('.pname').textContent = names[i];
+    pills[i].querySelector('.ptime').textContent = fmtTime(t);
+    pills[i].classList.remove('active');
+    if (m > nowM && m < nextMins) { nextMins = m; nextIdx = i; }
+  });
+  if (nextIdx === -1) nextIdx = 0; // wrap to fajr
+  pills[nextIdx].classList.add('active');
+
+  // Countdown
+  const diffM = nextMins - nowM;
+  const h = Math.floor(diffM/60), m = diffM%60;
+  document.getElementById('prayer-countdown').textContent = `${pad(h)}:${pad(m)}`;
+  document.getElementById('next-prayer-name').textContent = names[nextIdx];
+}
+
+function schedulePrayerNotifs() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(sw => {
+    Object.entries(prayerTimes).forEach(([name, time]) => {
+      const [h,m] = time.split(':').map(Number);
+      const target = new Date(); target.setHours(h,m,0,0);
+      const diff = target - Date.now();
+      if (diff > 0) {
+        sw.active?.postMessage({
+          type: 'SCHEDULE_NOTIFICATION',
+          title: `☪️ حان وقت ${name}`,
+          body: `وقت صلاة ${name} — ${fmtTime(time)}`,
+          delay: diff,
+          tag: `prayer-${name}`
+        });
+      }
+    });
+  });
+}
+
+// ─── Render Today ────────────────────────────────────────────────────────────
+function getTasksForDay(dayIdx) {
+  const base = SCHEDULE[dayIdx] || [];
+  const customs = customTasks.filter(t => t.day == dayIdx);
+  return [...base, ...customs].sort((a,b) => toMins(a.t) - toMins(b.t));
+}
+
+function renderToday() {
+  const dayIdx = jsToOur(new Date().getDay());
+  const tasks = getTasksForDay(dayIdx);
+  const nowM = now();
+
+  let currentIdx = -1;
+  tasks.forEach((task, i) => {
+    const start = toMins(task.t);
+    const end = task.end ? toMins(task.end) : start + 60;
+    if (nowM >= start && nowM < end) currentIdx = i;
+  });
+
+  // Hero
+  const hero = document.getElementById('current-hero');
+  if (currentIdx >= 0) {
+    const cur = tasks[currentIdx];
+    const start = toMins(cur.t), end = cur.end ? toMins(cur.end) : start+60;
+    const pct = Math.min(100, ((nowM - start) / (end - start)) * 100);
+    document.getElementById('hero-task').textContent = `${cur.emoji} ${cur.name}`;
+    document.getElementById('hero-time').textContent = `${fmtTime(cur.t)} ← ${cur.end ? fmtTime(cur.end) : '--'}`;
+    document.getElementById('hero-bar').style.width = pct + '%';
+    hero.style.display = 'block';
+  } else {
+    hero.style.display = 'none';
+  }
+
+  const container = document.getElementById('today-tasks-container');
+  let html = `<div class="section-hdr">${DAY_NAMES[dayIdx]} — جدول اليوم</div>
+               <div class="schedule-list">`;
+  tasks.forEach((task, i) => {
+    const start = toMins(task.t);
+    const end = task.end ? toMins(task.end) : start+60;
+    const isCurrent = i === currentIdx;
+    const isDone = nowM >= end;
+    html += `<div class="task-card cat-${task.cat||'custom'} ${isCurrent?'current':''} ${isDone?'done':''}">
+      <div class="task-emoji">${task.emoji||'📝'}</div>
+      <div class="task-info">
+        <div class="task-name">${task.name}</div>
+        <div class="task-time">${fmtTime(task.t)}${task.end?' ← '+fmtTime(task.end):''}</div>
+      </div>
+      ${isCurrent ? '<div class="task-badge">الآن</div>' : ''}
+      ${task.custom ? `<button class="task-delete-btn" onclick="deleteTask(${task.id})">🗑</button>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  // Schedule task-end notifications
+  if (notifGranted) scheduleTaskNotifs(tasks, dayIdx);
+}
+
+function scheduleTaskNotifs(tasks, dayIdx) {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(sw => {
+    tasks.forEach((task, i) => {
+      if (!task.end) return;
+      const [h,m] = task.end.split(':').map(Number);
+      const target = new Date(); target.setHours(h,m,0,0);
+      const diff = target - Date.now();
+      const next = tasks[i+1];
+      if (diff > 0 && diff < 24*60*60*1000) {
+        sw.active?.postMessage({
+          type: 'SCHEDULE_NOTIFICATION',
+          title: `✅ انتهى: ${task.name}`,
+          body: next ? `التالي: ${next.emoji} ${next.name} — ${fmtTime(next.t)}` : 'وقت الراحة!',
+          delay: diff,
+          tag: `task-end-${i}`
+        });
+      }
+    });
+  });
+}
+
+// ─── Week View ───────────────────────────────────────────────────────────────
+function renderWeek() {
+  const sel = document.getElementById('day-selector');
+  sel.innerHTML = DAY_SHORT.map((name, i) => {
+    const isToday = i === jsToOur(new Date().getDay());
+    const isSelected = i === selectedDay;
+    return `<button class="day-btn ${isToday?'today':''} ${isSelected?'selected':''}"
+              onclick="selectDay(${i})">${name}</button>`;
+  }).join('');
+  renderWeekTasks();
+}
+
+function selectDay(idx) {
+  selectedDay = idx;
+  renderWeek();
+}
+
+function renderWeekTasks() {
+  const tasks = getTasksForDay(selectedDay);
+  const container = document.getElementById('week-tasks-container');
+  let html = `<div class="section-hdr">${DAY_NAMES[selectedDay]}</div>
+               <div class="schedule-list">`;
+  tasks.forEach(task => {
+    html += `<div class="task-card cat-${task.cat||'custom'}">
+      <div class="task-emoji">${task.emoji||'📝'}</div>
+      <div class="task-info">
+        <div class="task-name">${task.name}</div>
+        <div class="task-time">${fmtTime(task.t)}${task.end?' ← '+fmtTime(task.end):''}</div>
+      </div>
+      ${task.custom ? `<button class="task-delete-btn" onclick="deleteTask(${task.id})">🗑</button>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name==='week') renderWeek();
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+let selEmoji = '📝';
+function selectEmoji(el) {
+  document.querySelectorAll('.emoji-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  selEmoji = el.dataset.e;
+}
+
+function saveCustomTask() {
+  const name = document.getElementById('task-name').value.trim();
+  const start = document.getElementById('task-start').value;
+  const end = document.getElementById('task-end').value;
+  const day = parseInt(document.getElementById('task-day').value);
+  if (!name || !start) return alert('أدخل اسم المهمة والوقت');
+
+  const task = {
+    id: Date.now(), custom: true, cat: 'custom',
+    emoji: selEmoji, name, t: start, end: end||null, day
+  };
+  customTasks.push(task);
+  localStorage.setItem('custom_tasks', JSON.stringify(customTasks));
+  closeModal();
+  renderToday();
+  if (selectedDay === day) renderWeek();
+}
+
+function deleteTask(id) {
+  customTasks = customTasks.filter(t => t.id !== id);
+  localStorage.setItem('custom_tasks', JSON.stringify(customTasks));
+  renderToday();
+  renderWeek();
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+async function requestNotifications() {
+  if (!('Notification' in window)) return alert('المتصفح لا يدعم التنبيهات');
+  const perm = await Notification.requestPermission();
+  notifGranted = perm === 'granted';
+  document.getElementById('notif-status').textContent = notifGranted ? 'مفعّل' : 'مرفوض';
+  document.getElementById('notif-status').className = 'notif-status ' + (notifGranted?'on':'off');
+  if (notifGranted) {
+    schedulePrayerNotifs();
+    renderToday();
+  }
+}
+
+function testNotification() {
+  if (Notification.permission !== 'granted') {
+    requestNotifications();
+    return;
+  }
+  new Notification('🔔 اختبار جدولي', {
+    body: 'التنبيهات تعمل بشكل صحيح ✅',
+    icon: '/icon.png'
+  });
+}
+
+// ─── Service Worker ───────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(() => {
+    if (Notification.permission === 'granted') {
+      notifGranted = true;
+      document.getElementById('notif-status').textContent = 'مفعّل';
+      document.getElementById('notif-status').className = 'notif-status on';
+    }
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+fetchPrayers();
+renderToday();
+
+setInterval(() => {
+  updateClock();
+  renderPrayers();
+  // Re-render today every minute to update current task
+  if (document.getElementById('page-today').classList.contains('active')) {
+    renderToday();
+  }
+}, 60000);
+
+updateClock();
+
+// Close modal on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
